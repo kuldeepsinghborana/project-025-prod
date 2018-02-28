@@ -7,4 +7,4 @@
 * db: mongodb
 * JS engine: nodeJS
 * API server: express
-* frontend: AngularJS
+* frontend: Angular 5
