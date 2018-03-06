@@ -30,6 +30,10 @@ MIT
 MIT
 MIT
 
+@angular/forms@5.2.6
+MIT
+MIT
+
 @angular/http@5.2.6
 MIT
 MIT
