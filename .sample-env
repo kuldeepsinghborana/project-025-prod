@@ -1,11 +1,11 @@
 # environment variables used in the app
 # create a `.env` file and fill it with appropriate values
-#PORT=4000
+
 # app running environment
-#NODE_ENV=development
+NODE_ENV=development
 
 # database
-#DB_HOST=localhost
-#DB_USER=
-#DB_PASS=
+DB_HOST=localhost
+DB_USER=
+DB_PASS=
 
