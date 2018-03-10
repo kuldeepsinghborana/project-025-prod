@@ -46,6 +46,10 @@ MIT
 MIT
 MIT
 
+amazing-time-picker@1.5.2
+MIT
+MIT
+
 moment@2.21.0
 MIT
 Copyright (c) JS Foundation and other contributors

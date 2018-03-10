@@ -259,7 +259,6 @@ BotControl.processTask= async function(req, res, task){
 								job_id = id;
 							}
 						}
-
 	  	  		var response = {}
 	  	  		console.log(messenger_user_id);
 
