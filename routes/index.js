@@ -1,10 +1,8 @@
 var express = require('express');
 var cookieParser = require('cookie-parser');
-var cors = require('cors');
 let auth = require('../helper/auth');
 var router = express.Router();
 
-router.use(cors());
 // image upload
 var multer = require('multer')
 var storage = multer.diskStorage({
@@ -222,7 +220,7 @@ router
   .route('/employer/jobs/new')
   .get(auth.requiresEmployerLogin, ctrlEmployer.newJob);
 router
-  .route('/employer/jobs/:jobId')
+  .route('/api/employer/jobs/:jobId')
   .get(ctrlEmployer.showJob);
   router
   .route('/employer/jobsWithId/:jobId')
@@ -237,7 +235,7 @@ router
   .route('/employer/workers/:workerId')
   .get(auth.requiresEmployerLogin, ctrlEmployer.showWorker);
 router
-  .route('/employer/workers/invite/:jobId')
+  .route('/api/employer/employees/invite/:jobId')
   .get(auth.requiresEmployerLogin, ctrlEmployer.inviteWorkers);
 router
   .route('/employer/notifications')
@@ -250,22 +248,26 @@ router.get('/employer/buy-carrots', function (req, res, next) {
   res.render('employer/buyCarrots', { title: 'Jobbunny | Employer > Carrots' });
 });
 
+router
+  .route('/api/employer/sendinvite')
+  .post(auth.requiresEmployerLogin, ctrlEmployer.sendinvite);
+
 
 // admin routes
 router
-  .route('/admin')
+  .route('/api/admin')
   .get(auth.requiresAdminLogin, ctrlAdmin.dashboard)
 router
-  .route('/admin/settings')
-  .get(auth.requiresAdminLogin, ctrlAdmin.settings);
-router
-  .route('/admin/employers')
+  .route('/api/admin/employers')
   .get(auth.requiresAdminLogin, ctrlAdmin.employersList);
 router
   .route('/admin/employers/search')
   .get(auth.requiresAdminLogin, ctrlAdmin.searchEmployers);
 router
-  .route('/admin/employers/:employerId')
+  .route('/api/admin/settings')
+  .get(auth.requiresAdminLogin, ctrlAdmin.settings);
+router
+  .route('/api/admin/employers/:employerId')
   .get(auth.requiresAdminLogin, ctrlAdmin.showEmployer);
 router
   .route('/api/admin/jobs')
@@ -277,7 +279,7 @@ router
   .route('/api/admin/employee')
   .get(auth.requiresAdminLogin, ctrlAdmin.workersList);
 router
-  .route('/admin/workers/:workerId')
+  .route('/api/admin/employees/:employeeId')
   .get(auth.requiresAdminLogin, ctrlAdmin.showWorker);
 router
   .route('/admin/carrots')

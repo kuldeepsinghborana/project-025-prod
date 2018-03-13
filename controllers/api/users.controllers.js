@@ -1,12 +1,13 @@
-var mongoose = require('mongoose');
-let waterfall = require('async-waterfall');
-let jwt = require('../../helper/jwt');
+const mongoose = require('mongoose');
+const jwt = require('../../helper/jwt');
 const crypto = require('crypto');
-var User = mongoose.model('User');
-var Notification = mongoose.model('Notification');
-var bcrypt = require('bcrypt');
-var imgur = require('imgur');
-let utils = require('../../helper/utils');
+const User = mongoose.model('User');
+const Notification = mongoose.model('Notification');
+const bcrypt = require('bcrypt');
+const imgur = require('imgur');
+const promise = require('bluebird');
+const utils = require('../../helper/utils');
+const waterfall = require('async-waterfall');
 
 
 
@@ -88,35 +89,122 @@ module.exports.isEmailExist = function (req, res) {
 //   }
 // };
 
+
+function generateReferenceNumber(cb) {
+  let referenceNumber = utils.makeRandomWithCharacter();
+  let filter = {
+    referenceNumber: referenceNumber
+  }
+
+  User.find(filter, function (err, result) {
+    (err) => {
+      let response = {
+        status: 400,
+        message: 'Please Try Again'
+      }
+      return res.status(400).json(response);
+    }
+    if (result && result.length > 0) {
+      generateReferenceNumber(cb);
+    } else {
+      cb(referenceNumber);
+    }
+  });
+  // User.find(filter).exec(result => {
+  //   if (result && result.length > 0) {
+  //     generateReferenceNumber(cb);
+  //   } else {
+  //     cb(referenceNumber);
+  //   }
+  // }, (err) => {
+  //   let response = {
+  //     status: 400,
+  //     message: 'Please Try Again'
+  //   }
+  //   return res.status(400).json(response);
+  // });
+}
+
 module.exports.register = (req, res) => {
   let token = crypto.randomBytes(20).toString('hex');
+  let newReferenceNumber;
+  let referralSender;
   waterfall([
     function (callback) {
+      generateReferenceNumber((data) => {
+        newReferenceNumber = data;
+        callback(null);
+      });
+    },
+    function (callback) {
+      if (req.body.referenceNumber) {
+        let filter = {
+          referenceNumber: req.body.referenceNumber
+        }
+        User.find(filter, function (err, result) {
+          console.log('result', result);
+          if (result && result.length > 0) {
+            referralSender = result[0];
+            let carrot = {
+              available: 110,
+              pending: 0,
+              total: 110
+            }
+            callback(null, carrot);
+          } else {
+            let carrot = {
+              available: 100,
+              pending: 0,
+              total: 100
+            }
+            callback(null, carrot);
+          }
+        });
+      } else {
+        let carrot = {
+          available: 100,
+          pending: 0,
+          total: 100
+        }
+        callback(null, carrot);
+      }
+    },
+    function (carrot, callback) {
       if (req.body.email && req.body.password) {
         var userData = {
           email: req.body.email,
           name: req.body.name,
           password: req.body.password,
           // passwordConf: req.body.passwordConf,
-          phoneNumber: req.body.handphoneNumber,
+          phoneNumber: parseInt(req.body.handphoneNumber),
           companyname: req.body.companyname,
           token: token,
-          carrots: {
-            available: 100,
-            pending: 0
-          }
+          // carrots: {
+          //   available: 100,
+          //   pending: 0,
+          //   total: 100
+          // },
+          carrots: carrot,
+          referenceNumber: newReferenceNumber
         }
         User.create(userData, function (err, user) {
           if (err) {
-            console.log("Error creating user", err)
+            console.log("Error creating user", err);
+            if (err.code === 11000) {
+              let response = {
+                status: 400,
+                message: "Already Registered"
+              }
+              return res.status(400).json(response);
+            }
             // res.status(400).render('sessions/register', { error: err });
             let response = {
               status: 400,
               message: "FAILED"
             }
-            return res.status(200).json(response);
+            return res.status(400).json(response);
           } else {
-            callback(null, userData);
+            callback(null, userData, user);
           }
         });
       } else {
@@ -128,7 +216,37 @@ module.exports.register = (req, res) => {
         }
         return res.status(400).json(response);
       }
-    }, function (data, callback) {
+    }, function (data, user, callback) {
+      if (referralSender && referralSender != null && referralSender != undefined) {
+        // console.log('referralSender', referralSender);
+        let user_id = referralSender._id;
+        let purchasedCarrot = 10;
+        let oldTotalCarrots = referralSender.carrots.total;
+        let oldAvailableCarrots = referralSender.carrots.available;
+        let updatedTotalCarrot = Number(oldTotalCarrots) + Number(purchasedCarrot);
+        let updatedAvailableCarrot = Number(oldAvailableCarrots) + Number(purchasedCarrot);
+        let userNewData = {
+          carrots: {
+            total: Number(updatedTotalCarrot),
+            available: Number(updatedAvailableCarrot),
+            pending: referralSender.carrots.pending
+          }
+        }
+        // console.log('userNewData', userNewData);
+        User.findByIdAndUpdate(user_id, userNewData, { new: true }, function (err, updatedUserData) {
+          if (err) {
+            console.log('err', err);
+            // callback(err);
+            callback(null, data, user);
+          } else {
+            // console.log('updatedUserData', updatedUserData);
+            callback(null, data, user);
+          }
+        });
+      } else {
+        callback(null, data, user);
+      }
+    }, function (data, user, callback) {
       let email = data.email;
       let token = data.token;
       let username = data.name ? data.name : '';
@@ -156,7 +274,8 @@ module.exports.register = (req, res) => {
               // callback(null, result);
               let response = {
                 status: 200,
-                message: "SUCCESS"
+                message: "SUCCESS",
+                userId: user._id
               }
               return res.status(200).json(response);
             }
@@ -173,7 +292,7 @@ module.exports.register = (req, res) => {
   ], function (err) {
     response = {
       status: 400,
-      'error': err
+      error: err
     }
     return res.status(400).json(response);
   });
@@ -267,75 +386,62 @@ module.exports.logout = function (req, res, next) {
 // POST /api/users/update
 module.exports.updateUser = function (req, res) {
   let userId = jwt.getCurrentUserId(req);
-  utils.getCurrentUser(req).then((current_user) => {
-    console.log('UPDATE user with _id: ' + userId);
-    var formData = req.body;
-    var updateParams = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      companyName: formData.companyName,
-      profilePic: req.file ? req.file.filename : current_user.profilePic || null
-    };
-
-    if (formData.password.length > 0 && formData.passwordConf.length > 0) {
-      if (formData.password !== formData.passwordConf) {
-        err = "Password does not match with Password confirmation";
-        req.flash('error', err);
-        return res.redirect(_getRedirectionPath(current_user.userType));
-      }
-      updateParams.password = formData.password;
-    } else {
-      req.flash('error', 'Please enter password and password confirmation to update your settings');
-      return res.redirect(_getRedirectionPath(current_user.userType));
-    }
-
-    User
-      .findById(userId)
-      .exec(function (err, user) {
-        if (err) {
-          console.log("User not found: ", err)
-          res.locals.error = 'User not found ' + err;
-          res.redirect(_getRedirectionPath(current_user.userType));
+  return new Promise((resolve, reject) => {
+    utils.getCurrentUser(req).then((current_user) => {
+      console.log('UPDATE user with _id: ' + userId);
+      var formData = req.body;
+      var updateParams = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        companyName: formData.companyName,
+        profilePic: req.file ? req.file.filename : current_user.profilePic || null
+      };
+      if (formData.password.length > 0 && formData.passwordConf.length > 0) {
+        if (formData.password !== formData.passwordConf) {
+          err = "Password does not match with Password confirmation";
+          reject(400, err);
         }
-        console.log('Found user: ', user._id);
-        user.set(updateParams);
-        user.save(function (err, user) {
-          if (err) {
-            console.log("Error updating user")
-            req.flash('error', 'Error updating user');
-            res.redirect(req.header('Referer'));
-          }
-          req.flash('info', 'Account updated sucessfully');
-          if (user.profilePic) {
-            // upload profile pic
-            imgur.uploadFile('public/uploads/' + user.profilePic).then(function (json) {
-              remote_url = json.data.link;
-              User.findByIdAndUpdate(user._id, { $set: { profilePic: remote_url } }, { new: true }, function (err, user) {
-                if (err) {
-                  console.log("Something wrong when updating data!");
-                  res.redirect(_getRedirectionPath(current_user.userType));
-                }
-                console.log('Updated user', user);
-                // reset session user to reflect changes in UI
-                req.session.user = user;
-                res.redirect(_getRedirectionPath(current_user.userType));
+        updateParams.password = formData.password;
+      } else {
+        reject(400, 'Please enter password and password confirmation to update your settings');
+      }
+      return User
+        .findById(userId)
+        .exec().then((user) => {
+          console.log('Found user: ', user._id);
+          user.set(updateParams);
+          return user.save().then(user => {
+            if (user.profilePic) {
+              // upload profile pic
+              return imgur.uploadFile('public/uploads/' + user.profilePic).then(json => {
+                remote_url = json.data.link;
+                return User.findByIdAndUpdate(user._id, { $set: { profilePic: remote_url } }, { new: true }).then(user => {
+                  resolve();
+                  // reset session user to reflect changes in UI
+                  // req.session.user = user;
+                });
               });
-            })
-              .catch(function (err) {
-                console.error(err.message);
-                res.redirect(_getRedirectionPath(current_user.userType));
-              });
-          } else {
-            // reset session user to reflect changes in UI
-            req.session.user = user;
-            res.redirect(_getRedirectionPath(current_user.userType));
-          }
+            }
+          });
         });
+    });
+  })
+    .then(() => {
+      return res.json({
+        message: 'Account updated successfully'
+      })
+    })
+    .catch((status, err) => {
+      if (status && err) {
+        return res.status(status).json({
+          message: err
+        });
+      }
+      return res.status(500).json({
+        message: 'Something went wrong'
       });
-  }).catch((err) => {
-    res.status(401).send('Not Authorized')
-  });
+    });
 }
 
 //Get /api/users/activateaccount/:token

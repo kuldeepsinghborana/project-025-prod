@@ -4,6 +4,7 @@ var Job = mongoose.model('Job');
 var moment = require('moment');
 var imgur = require('imgur');
 let waterfall = require('async-waterfall');
+const jwt = require('../../helper/jwt');
 
 // Setting
 imgur.setClientId('e019b1bcff86b7f');
@@ -21,8 +22,17 @@ module.exports.newJob = function (req, res) {
 
 // POST /api/jobs
 module.exports.createJob = function (req, res) {
+  let user_id = jwt.getCurrentUserId(req);
+
   console.log('Creating new job');
   var formData = req.body;
+  let employerId;
+  if(formData.employerId != "" && formData.employerId != undefined){
+    employerId = formData.employerId
+  }
+  else{
+    employerId = user_id
+  }
   var newJob = Job({
     jobTitle: formData.jobTitle,
     jobType: formData.jobType,
@@ -48,18 +58,19 @@ module.exports.createJob = function (req, res) {
     employerName: formData.employerName,
     employerEmail: formData.employerEmail,
     employerPhone: formData.employerPhone,
-    employerId: formData.employerId,
+    employerId: employerId,
     coverImage: req.file ? req.file.filename : null
+    
   });
-
+ 
   newJob.save(function (err, job) {
     if (err) {
       console.log("Error creating job", err)
-      res.send({
+      return res.stattus(400).send({
         status: 400,
         message: "Error creating job",
         error: err
-      })
+      });
       // req.session.error = 'Error creating job';
       // res.redirect(400, '/newjob');
     } else {
@@ -166,15 +177,15 @@ module.exports.updateJob = function (req, res) {
                 if (err) {
                   console.log("Something wrong when updating data!");
                   res.send({
-                    status:400,
-                    message:"Something wrong when updating data!"
+                    status: 400,
+                    message: "Something wrong when updating data!"
                   })
                   return false;
                 }
                 console.log('Updated job', job);
                 res.send({
-                  status:1,
-                  message:"Updated job"
+                  status: 1,
+                  message: "Updated job"
                 })
                 return false;
               });
@@ -185,8 +196,8 @@ module.exports.updateJob = function (req, res) {
               });
           } else {
             res.send({
-              status:1,
-              message:"job Job updated successfully"
+              status: 1,
+              message: "job Job updated successfully"
             })
             // req.flash('info', 'Job updated successfully');
             // res.redirect(getRedirectionPath(req, job._id));
@@ -224,32 +235,20 @@ module.exports.getJob = function (jobId) {
 module.exports.deleteJob = function (req, res, next) {
   var jobId = req.params.jobId;
   console.log('GET job with _id: ' + jobId);
-
-  Job
+  return Job
     .findById(jobId)
-    .exec(function (err, job) {
-      if (err) {
-        console.log("Job not found: ", err)
-        res.status(400).render('error');
-      }
-      console.log('Found job: ', job._id);
-      //remove it from db
-      job.remove(function (err, job) {
-        if (err) {
-          console.log(err);
-        } else {
+    .exec()
+    .then(job => {
+      return job.remove()
+        .then(() => {
           console.log('DELETE removing ID: ' + job._id);
-          res.format({
-            html: function () {
-              req.flash('message', 'Job deleted successfully!')
-              res.redirect(getRedirectionPath(req));
-            },
-            json: function () {
-              res.json({ message: 'deleted' });
-            }
-          });
-        }
-      });
+          res.json({ message: 'deleted' });
+        })
+    })
+    .catch(err => {
+      res.status(500).json({
+        message: 'Something went wrong'
+      })
     });
 }
 
@@ -269,12 +268,11 @@ module.exports.markJob = function (req, res, next) {
         console.log(err);
       } else {
         console.log('Updated successfully: ' + job._id);
-        res.format({
-          html: function () {
-            req.flash('message', 'Job marked [' + status + '] successfully!')
-            res.redirect(getRedirectionPath(req));
-          }
-        });
+        res.send({
+          status: 1,
+          message: "Status changed successfully"
+        })
+        return false;
       }
     });
 }
