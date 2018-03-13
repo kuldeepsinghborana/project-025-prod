@@ -2139,8 +2139,8 @@ var UserService = /** @class */ (function () {
 // The list of which env maps to which file can be found in `.angular-cli.json`.
 var environment = {
     production: false,
-    API_URI: 'http://localhost:3000/api'
-    // API_URI:'https://project25.herokuapp.com/api'
+    //  API_URI:'http://localhost:3000/api'
+    API_URI: 'https://project25.herokuapp.com/api'
 };
 
 
