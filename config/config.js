@@ -1,25 +1,26 @@
-let devSetting = function () { };
+let settings = function () { };
 
 
-devSetting.SITE_URL = 'http://localhost:4200/';
-devSetting.SECRET = process.env.SECRET_KEY;
+settings.SITE_URL = 'https://project25.herokuapp.com/';
+settings.SECRET = process.env.SECRET_KEY;
 
 //Mail Credentials
-devSetting.MAIL_API_USER = '3f84163041d190';
-devSetting.MAIL_API_KEY = '6ef6472c613581';
-
+settings.MAIL_API_USER = 'hello@jobbunny.co';
+settings.MAIL_API_KEY = 'asdlkjasdlkj123';
+settings.MAIL_HOST = 'smtp.gmail.com';
+settings.MAIL_PORT = 587
 
 // Braintree Credentials
-devSetting.BRAINTREE_MERCHANT_ID = '63fx8429457h347r';
-devSetting.PUBLIC_KEY = 'pvgmyy347ptrm4c5';
-devSetting.PRIVATE_KEY = '892573e01000aea0a9fd92c5d3eb3845';
+settings.BRAINTREE_MERCHANT_ID = '63fx8429457h347r';
+settings.PUBLIC_KEY = 'pvgmyy347ptrm4c5';
+settings.PRIVATE_KEY = '892573e01000aea0a9fd92c5d3eb3845';
 
-devSetting.LIMIT = process.env.LIMIT;
-devSetting.ALLOWED_IMAGE_FILES = ["jpg", "png", "jpeg"];
+settings.LIMIT = process.env.LIMIT;
+settings.ALLOWED_IMAGE_FILES = ["jpg", "png", "jpeg"];
 
 //Referal Carrot
-devSetting.REFERRAL_CARROT_SENDER = 10;
-devSetting.REFERRAL_CARROT_RECEIVER = 10;
+settings.REFERRAL_CARROT_SENDER = 10;
+settings.REFERRAL_CARROT_RECEIVER = 10;
 
-module.exports = devSetting;
+module.exports = settings;
 

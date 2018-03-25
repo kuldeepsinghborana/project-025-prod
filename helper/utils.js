@@ -98,8 +98,8 @@ utilsfunction.sendEmail = (toEmail, subject, body, callback) => {
 
     let options =
         {
-            host: "smtp.mailtrap.io",
-            port: 2525,
+            host: config.MAIL_HOST,
+            port: config.MAIL_PORT,
             auth: {
                 user: config.MAIL_API_USER,
                 pass: config.MAIL_API_KEY
@@ -129,6 +129,7 @@ utilsfunction.sendEmail = (toEmail, subject, body, callback) => {
         // console.log('error', error);
         // console.log('response', response);
         if (error) {
+            console.log('error', error);
             isEmailSent = false;
         } else {
             // console.log(response);
@@ -149,7 +150,7 @@ utilsfunction.getCurrentUser = (req) => {
             _id: userId,
             userType: 'employer'
         }
-        return User.findOne(filter).then((data)=>{
+        return User.findOne(filter).then((data) => {
             return data;
         });
     }
